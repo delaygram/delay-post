@@ -1,38 +1,166 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: >
-  delay-post
+Description: delay-post
 
-  Sample SAM Template for delay-post
-
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 5
+    Runtime: python3.9
+    Architectures: [ x86_64 ]
+    Handler: app.lambda_handler
+    Layers: [ !Ref DependenciesLayer ]
+    Environment:
+      Variables:
+        StageName: !Ref StageName
+        EVENT_BUS: !Ref EventBus
+
+Parameters:
+  StageName:
+    Type: String
+    Default: default
+  EventBus:
+    Type: String
+    Default: default
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # Post API
+
+  PostApi:
+    Type: AWS::Serverless::Api
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
-      Runtime: python3.9
-      Architectures:
-        - x86_64
-      Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Properties:
-            Path: /hello
-            Method: get
+      StageName: !Ref StageName
+      TracingEnabled: true
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location: openapi.yaml
+
+  # Post API Permissions
+
+  AllowPostApiToInvokeCreateLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: CreateFunction
+    Properties:
+      FunctionName: !GetAtt CreateFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/POST/post/posts
+
+  AllowPostApiToInvokeDeleteLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: DeleteFunction
+    Properties:
+      FunctionName: !GetAtt DeleteFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/DELETE/post/posts/{id}
+
+  AllowPostApiToInvokeCurrentUserPostLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: CurrentUserPostFunction
+    Properties:
+      FunctionName: !GetAtt CurrentUserPostFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/GET/post/posts/me
+
+  AllowPostApiToInvokeGivenUserPostLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: GivenUserPostFunction
+    Properties:
+      FunctionName: !GetAtt GivenUserPostFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/GET/post/posts/{username}
+
+  AllowPostApiToInvokeSpecificPostLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: SpecificPostFunction
+    Properties:
+      FunctionName: !GetAtt SpecificPostFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/POST/post/posts/in
+
+  # Functions
+
+  CreateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/create
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+      Tracing: Active
+
+  DeleteFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/delete
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+      Tracing: Active
+
+  CurrentUserPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/get_current_user_post
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+      Tracing: Active
+
+  GivenUserPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/get_given_user_post
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+      Tracing: Active
+
+  SpecificPostFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/get_specific_post
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+      Tracing: Active
+
+  # Dependencies
+
+  DependenciesLayer:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      LayerName:
+        Fn::Sub: delaygram-dependencies-${StageName}
+      ContentUri: dependencies
+    Metadata:
+      BuildMethod: python3.9
+
+  # Event Bus Permissions
+
+#  PermissionForCreateEventToInvokeCreateLambda:
+#    Type: AWS::Lambda::Permission
+#    Properties:
+#      FunctionName: !Ref CreateFunction
+#      Action: lambda:InvokeFunction
+#      Principal: events.amazonaws.com
+#      SourceArn: !GetAtt CheckDeckPlayabilitySubscription.Arn
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  PostApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${PostApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/post"
   HelloWorldFunction:
     Description: "Hello World Lambda Function ARN"
     Value: !GetAtt HelloWorldFunction.Arn

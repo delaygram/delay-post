@@ -34,8 +34,8 @@ jobs:
           pip3 install -r dependencies/requirements.txt
           pip3 install -r tests/requirements.txt
           pip3 install awscli
-          coverage run --source=functions/ -m pytest tests/ -v -rap --junitxml target/pytest-coverage/testreport-delay-post.xml
-          coverage xml -o target/pytest-coverage/coverage-delay-post.xml
+#          coverage run --source=functions/ -m pytest tests/ -v -rap --junitxml target/pytest-coverage/testreport-delay-post.xml
+#          coverage xml -o target/pytest-coverage/coverage-delay-post.xml
 
       - name: Sonarcloud scan
         uses: SonarSource/sonarcloud-github-action@master
@@ -63,9 +63,9 @@ jobs:
           git tag -a release-${{ github.run_number }} -m "Tag for github release-${{ github.run_number }}"
           git push origin release-${{ github.run_number }}
 
-      - name: Publish test results
-        run: |
-          aws s3 cp target/pytest-coverage s3://delaygram-testresults/post/build-${{ github.run_number }}/pytest-coverage --recursive
+#      - name: Publish test results
+#        run: |
+#          aws s3 cp target/pytest-coverage s3://delaygram-testresults/post/build-${{ github.run_number }}/pytest-coverage --recursive
           
           # TODO: add test results of functional and performance tests
           

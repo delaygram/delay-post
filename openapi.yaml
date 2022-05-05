@@ -37,6 +37,31 @@ paths:
           Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateFunction.Arn}/invocations
 
   /post/posts/{id}:
+    get:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+        - in: path
+          name: username
+          schema:
+            type: string
+          required: true
+          description: Username of a user
+          example: john98
+      responses:
+        200:
+          $ref: '#/components/responses/GetSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GivenUserPostFunction.Arn}/invocations
     delete:
       tags:
         - Post
@@ -86,33 +111,6 @@ paths:
         type: aws_proxy
         uri:
           Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CurrentUserPostFunction.Arn}/invocations
-
-  /post/posts/{username}:
-    get:
-      tags:
-        - Post
-      parameters:
-        - in: header
-          name: token
-          schema:
-            type: string
-          required: true
-          description: User token
-        - in: path
-          name: username
-          schema:
-            type: string
-          required: true
-          description: Username of a user
-          example: john98
-      responses:
-        200:
-          $ref: '#/components/responses/GetSuccess'
-      x-amazon-apigateway-integration:
-        httpMethod: POST
-        type: aws_proxy
-        uri:
-          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GivenUserPostFunction.Arn}/invocations
 
   /post/posts/in:
     post:

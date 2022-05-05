@@ -13,6 +13,7 @@ Globals:
       Variables:
         StageName: !Ref StageName
         EVENT_BUS: !Ref EventBus
+        POSTS_TABLE: !Ref PostsTable
 
 Parameters:
   StageName:
@@ -44,6 +45,8 @@ Resources:
           Name: AWS::Include
           Parameters:
             Location: openapi.yaml
+      BinaryMediaTypes:
+        - '*/*'
       Auth:
         DefaultAuthorizer: DelaygramAuthorizer
         Authorizers:
@@ -117,6 +120,8 @@ Resources:
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
       Tracing: Active
 
   DeleteFunction:
@@ -126,6 +131,8 @@ Resources:
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
       Tracing: Active
 
   CurrentUserPostFunction:
@@ -135,6 +142,8 @@ Resources:
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
       Tracing: Active
 
   GivenUserPostFunction:
@@ -144,6 +153,8 @@ Resources:
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
       Tracing: Active
 
   SpecificPostFunction:
@@ -153,18 +164,39 @@ Resources:
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
       Tracing: Active
 
   # Dependencies
 
   DependenciesLayer:
-    Type: AWS::Lambda::LayerVersion
+    Type: AWS::Serverless::LayerVersion
     Properties:
       LayerName:
         Fn::Sub: delaygram-dependencies-${StageName}
       ContentUri: dependencies
     Metadata:
       BuildMethod: python3.9
+
+  # DynamoDB
+
+  PostsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      TableName:
+        Fn::Sub: PostsTable-${StageName}
+      BillingMode: PAY_PER_REQUEST
 
   # Event Bus Permissions
 
@@ -180,9 +212,3 @@ Outputs:
   PostApiUrl:
     Description: "API Gateway endpoint URL"
     Value: !Sub "https://${PostApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}/post"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn

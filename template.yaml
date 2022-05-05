@@ -21,6 +21,9 @@ Parameters:
   EventBus:
     Type: String
     Default: default
+  AuthArn:
+    Type: String
+    Default: default
 
 Resources:
 
@@ -30,12 +33,28 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref StageName
+      EndpointConfiguration: REGIONAL
       TracingEnabled: true
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          LoggingLevel: "INFO"
       DefinitionBody:
         Fn::Transform:
           Name: AWS::Include
           Parameters:
             Location: openapi.yaml
+      Auth:
+        DefaultAuthorizer: DelaygramAuthorizer
+        Authorizers:
+          DelaygramAuthorizer:
+            UserPoolArn:
+              Fn::Sub: arn:aws:cognito-idp:eu-west-3:088217417350:userpool/eu-west-3_${AuthArn}
+            Identity:
+              Header: token
+
+  # Staging VhJGi8jOl
+  # Production kak2I0gck
 
   # Post API Permissions
 

@@ -1,0 +1,223 @@
+openapi: 3.0.3
+info:
+  title: Delaygram Post API
+  version: 1.0.0
+
+servers:
+  - url: https://delaygram.nl/
+
+tags:
+  - name: Post
+    description: Post related endpoints
+
+paths:
+  /post/posts:
+    post:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/PostRequest'
+      responses:
+        200:
+          $ref: '#/components/responses/PostSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateFunction.Arn}/invocations
+
+  /post/posts/{id}:
+    delete:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Post ID
+          example: dc65e367-a473-473f-9bc9-a8d64dcf7fe4
+      responses:
+        200:
+          $ref: '#/components/responses/DeleteSuccess'
+        400:
+          $ref: '#/components/responses/BadRequestResponse'
+        404:
+          $ref: '#/components/responses/NotFoundResponse'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteFunction.Arn}/invocations
+
+  /post/posts/me:
+    get:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+      responses:
+        200:
+          $ref: '#/components/responses/GetSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CurrentUserPostFunction.Arn}/invocations
+
+  /post/posts/{username}:
+    get:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+        - in: path
+          name: username
+          schema:
+            type: string
+          required: true
+          description: Username of a user
+          example: john98
+      responses:
+        200:
+          $ref: '#/components/responses/GetSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GivenUserPostFunction.Arn}/invocations
+
+  /post/posts/in:
+    post:
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/IdsRequest'
+      responses:
+        200:
+          $ref: '#/components/responses/GetSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${SpecificPostFunction.Arn}/invocations
+
+components:
+  responses:
+    PostSuccess:
+      description: Successful Post response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Post'
+
+    DeleteSuccess:
+      description: Successful Delete response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Success'
+
+    GetSuccess:
+      description: Successful Get response
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Post'
+
+    NotFoundResponse:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequestResponse:
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    PostRequest:
+      type: object
+      properties:
+        post:
+          type: string
+          description: Post content
+          example: Hello World
+    IdsRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Post id
+        username:
+          type: string
+          description: Username of the user who posted
+        content:
+          type: string
+          description: Content of the post
+        createdAt:
+          type: string
+          description: Date of the post
+        updatedAt:
+          type: string
+          description: Date of the post
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    Success:
+      type: object
+      properties:
+        message:
+          type: string

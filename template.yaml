@@ -14,6 +14,7 @@ Globals:
         StageName: !Ref StageName
         EVENT_BUS: !Ref EventBus
         POSTS_TABLE: !Ref PostsTable
+        BUCKET_NAME: !Ref StorageBucket
 
 Parameters:
   StageName:
@@ -45,8 +46,6 @@ Resources:
           Name: AWS::Include
           Parameters:
             Location: openapi.yaml
-      BinaryMediaTypes:
-        - '*/*'
       Auth:
         DefaultAuthorizer: DelaygramAuthorizer
         Authorizers:
@@ -122,6 +121,8 @@ Resources:
             EventBusName: !Ref EventBus
         - DynamoDBCrudPolicy:
             TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
       Tracing: Active
 
   DeleteFunction:
@@ -133,6 +134,8 @@ Resources:
             EventBusName: !Ref EventBus
         - DynamoDBCrudPolicy:
             TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
       Tracing: Active
 
   CurrentUserPostFunction:
@@ -144,6 +147,8 @@ Resources:
             EventBusName: !Ref EventBus
         - DynamoDBCrudPolicy:
             TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
       Tracing: Active
 
   GivenUserPostFunction:
@@ -155,6 +160,8 @@ Resources:
             EventBusName: !Ref EventBus
         - DynamoDBCrudPolicy:
             TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
       Tracing: Active
 
   SpecificPostFunction:
@@ -166,6 +173,8 @@ Resources:
             EventBusName: !Ref EventBus
         - DynamoDBCrudPolicy:
             TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
       Tracing: Active
 
   # Dependencies
@@ -197,6 +206,14 @@ Resources:
       TableName:
         Fn::Sub: PostsTable-${StageName}
       BillingMode: PAY_PER_REQUEST
+
+  # Storage Bucket
+
+  StorageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: delay-post-storage-${StageName}
 
   # Event Bus Permissions
 

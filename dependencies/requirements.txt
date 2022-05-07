@@ -1,3 +1,5 @@
 requests
 aws-xray-sdk
 pyyaml
+decoder
+requests-toolbelt

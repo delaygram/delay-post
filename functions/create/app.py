@@ -24,33 +24,43 @@ def lambda_handler(event, context):
         patch_all()
         xray_patched = True
 
-    print(event)
+    print(f'Received event: {event}')
 
     body = json.loads(event['body'])
     print(body['file'])
     user_id = event['requestContext']['authorizer']['claims']['sub']
     filename_extension = body['file'].split('.')[-1]
-
+    validated = False
     generated_filename = f'{user_id}-{time.time()}.{filename_extension}'
+
+    print(f'Generating presigned url for {generated_filename}')
 
     presigned_url_response = {
         s3_client.generate_presigned_url(
             'put_object',
             Params={
                 'Bucket': bucket_name,
-                'Key': generated_filename,
+                'Key': f'images/{generated_filename}',
             },
             ExpiresIn=3600
         )
     }
 
+    print(f'Generating post object')
+
     post = {
         'PK': user_id,
         'SK': generated_filename,
-        'created_at': datetime.now(),
+        'created_at': str(datetime.now()),
         'caption': body['caption'],
-
+        'validated': validated,
     }
+
+    print(f'Saving post to DynamoDB with following data: {json.dumps(post)}')
+
+    posts_table.put_item(Item=post)
+
+    print(f'Returning response')
 
     return {
         'statusCode': 200,
@@ -58,6 +68,7 @@ def lambda_handler(event, context):
             'user_id': user_id,
             'upload_url': list(presigned_url_response).pop(),
             'generated_filename': generated_filename,
-            'caption': body['caption']
+            'caption': body['caption'],
+            'validated': validated,
         }),
     }

@@ -13,6 +13,7 @@ tags:
 paths:
   /post/posts:
     post:
+      summary: Create a new post
       tags:
         - Post
       parameters:
@@ -36,8 +37,36 @@ paths:
         uri:
           Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateFunction.Arn}/invocations
 
+  /post/posts/validate:
+    put:
+      summary: Validate a post
+      tags:
+        - Post
+      parameters:
+        - in: header
+          name: token
+          schema:
+            type: string
+          required: true
+          description: User token
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: '#/components/schemas/ValidateRequest'
+      responses:
+        200:
+          $ref: '#/components/responses/PostSuccess'
+      x-amazon-apigateway-integration:
+        httpMethod: POST
+        type: aws_proxy
+        uri:
+          Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ValidateFunction.Arn}/invocations
+
+
   /post/posts/{id}:
     get:
+      summary: Get a post of a specified user
       tags:
         - Post
       parameters:
@@ -63,6 +92,7 @@ paths:
         uri:
           Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GivenUserPostFunction.Arn}/invocations
     delete:
+      summary: Delete a post
       tags:
         - Post
       parameters:
@@ -94,6 +124,7 @@ paths:
 
   /post/posts/me:
     get:
+      summary: Get all posts of yourself
       tags:
         - Post
       parameters:
@@ -114,6 +145,7 @@ paths:
 
   /post/posts/in:
     post:
+      summary: Get all posts you specified
       tags:
         - Post
       parameters:
@@ -180,10 +212,23 @@ components:
     PostRequest:
       type: object
       properties:
-        post:
+        file:
           type: string
-          description: Post content
-          example: Hello World
+          description: The name of the file to be uploaded
+          example: 'pannekoek.png'
+        caption:
+          type: string
+          description: The caption of the post
+          example: 'This is a pannekoek'
+    ValidateRequest:
+      type: object
+      properties:
+        generated_filename:
+          type: string
+          example: '3d11e062-8a9f-4eeb-93ea-5757f845f537-1651912563.8017569.png'
+        uploaded:
+          type: boolean
+          example: true
     IdsRequest:
       type: object
       properties:
@@ -194,21 +239,22 @@ components:
     Post:
       type: object
       properties:
-        id:
+        user_id:
           type: string
-          description: Post id
-        username:
+          description: The id of the user
+          example: '3d11e062-8a9f-4eeb-93ea-5757f845f537'
+        upload_url:
           type: string
-          description: Username of the user who posted
-        content:
+          description: The url to upload the file to
+          example: 'https://example.com/upload/filename.png'
+        generated_filename:
           type: string
-          description: Content of the post
-        createdAt:
+          description: The generated filename of the file
+          example: '3d11e062-8a9f-4eeb-93ea-5757f845f537-1651912563.8017569.png'
+        caption:
           type: string
-          description: Date of the post
-        updatedAt:
-          type: string
-          description: Date of the post
+          description: The caption of the post
+          example: 'This is a pannekoek'
     Error:
       type: object
       properties:

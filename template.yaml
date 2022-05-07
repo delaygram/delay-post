@@ -70,6 +70,16 @@ Resources:
       SourceArn:
         Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/POST/post/posts
 
+  AllowPostApiToInvokeValidateLambda:
+    Type: AWS::Lambda::Permission
+    DependsOn: ValidateFunction
+    Properties:
+      FunctionName: !GetAtt ValidateFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${PostApi}/${StageName}/PUT/post/posts/validate
+
   AllowPostApiToInvokeDeleteLambda:
     Type: AWS::Lambda::Permission
     DependsOn: DeleteFunction
@@ -116,6 +126,19 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: functions/create
+      Policies:
+        - EventBridgePutEventsPolicy:
+            EventBusName: !Ref EventBus
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PostsTable
+        - S3FullAccessPolicy:
+            BucketName: !Ref StorageBucket
+      Tracing: Active
+
+  ValidateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/validate
       Policies:
         - EventBridgePutEventsPolicy:
             EventBusName: !Ref EventBus
@@ -185,6 +208,8 @@ Resources:
       LayerName:
         Fn::Sub: delaygram-dependencies-${StageName}
       ContentUri: dependencies
+      CompatibleRuntimes:
+        - python3.9
     Metadata:
       BuildMethod: python3.9
 

@@ -1,14 +1,13 @@
 import os
 
 import boto3
-import botocore.exceptions
 import json
 
 from aws_xray_sdk.core import patch_all
 
+xray_patched = False
 dynamo_db = boto3.resource('dynamodb', 'eu-west-3')
 posts_table = dynamo_db.Table(os.environ.get('POSTS_TABLE'))
-
 
 
 def lambda_handler(event, context):
@@ -24,15 +23,18 @@ def lambda_handler(event, context):
     user_id = event['requestContext']['authorizer']['claims']['sub']
     validated = True
 
-    item = posts_table.get_item(
+    item = posts_table.update_item(
         Key={
             'PK': user_id,
-            'SK': body['generated_filename']
-        }
+            'SK': body['generated_filename'],
+        },
+        UpdateExpression="SET validated = :validated",
+        ExpressionAttributeValues={
+            ':validated': validated,
+        },
     )
 
     print(f'Item: {item}')
-
 
     return {
         "statusCode": 200,

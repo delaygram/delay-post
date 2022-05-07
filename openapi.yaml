@@ -137,6 +137,8 @@ paths:
       responses:
         200:
           $ref: '#/components/responses/GetSuccess'
+        204:
+          $ref: '#/components/responses/NoContentResponse'
       x-amazon-apigateway-integration:
         httpMethod: POST
         type: aws_proxy
@@ -193,6 +195,13 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/Post'
+
+    NoContentResponse:
+      description: No content response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Success'
 
     NotFoundResponse:
       description: Not Found
